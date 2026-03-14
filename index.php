@@ -359,11 +359,9 @@
 
                         if($totalServices > 0)
                         {
-                            // Use wider column for categories with many services
-                            $colClass = ($totalServices > 6) ? 'col-lg-6 col-md-12' : 'col-lg-4 col-md-6';
                         ?>
 
-                            <div class="<?php echo $colClass; ?> sm-padding">
+                            <div class="col-lg-4 col-md-6 sm-padding">
                                 <div class="price_wrap">
                                     <h3><?php echo $category['category_name'] ?></h3>
                                     <ul class="price_list">
