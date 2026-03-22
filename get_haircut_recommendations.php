@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 include "connect.php";
 
 $faceShape = isset($_GET['face_shape']) ? strtolower(trim($_GET['face_shape'])) : '';
+$gender = isset($_GET['gender']) ? strtolower(trim($_GET['gender'])) : 'any';
 
 if (empty($faceShape)) {
     echo json_encode(['error' => 'Face shape parameter is required']);
@@ -23,20 +24,39 @@ if (!isset($shapeMap[$faceShape])) {
     exit;
 }
 
+$allowedGenders = ['any', 'male', 'female'];
+if (!in_array($gender, $allowedGenders, true)) {
+    echo json_encode(['error' => 'Invalid gender parameter']);
+    exit;
+}
+
 $searchTerm = $shapeMap[$faceShape];
 
 try {
-    $stmt = $con->prepare("
+    $sql = "
         SELECT s.service_id, s.service_name, s.service_description, s.service_price, s.service_duration
         FROM services s
         INNER JOIN service_categories sc ON s.category_id = sc.category_id
         WHERE sc.category_name = 'AI Haircut Recommendations'
         AND s.service_description LIKE :face_shape
-        ORDER BY s.service_id
-    ");
+    ";
+
+    if ($gender !== 'any') {
+        $sql .= " AND s.service_description LIKE :gender ";
+    }
+
+    $sql .= " ORDER BY s.service_id ";
+
+    $stmt = $con->prepare($sql);
     
     $searchPattern = "%Face Shape: {$searchTerm}%";
     $stmt->bindParam(':face_shape', $searchPattern, PDO::PARAM_STR);
+
+    if ($gender !== 'any') {
+        $genderPattern = "%Gender: " . ucfirst($gender) . "%";
+        $stmt->bindParam(':gender', $genderPattern, PDO::PARAM_STR);
+    }
+
     $stmt->execute();
     
     $services = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -1,8 +1,13 @@
 let servicesCache = null;
 
-async function fetchRecommendations(faceShape) {
+async function fetchRecommendations(faceShape, gender = 'any') {
     try {
-        const response = await fetch(`get_haircut_recommendations.php?face_shape=${faceShape}`);
+        const query = new URLSearchParams({
+            face_shape: faceShape,
+            gender: gender
+        });
+
+        const response = await fetch(`get_haircut_recommendations.php?${query.toString()}`);
         const data = await response.json();
         
         if (data.error) {

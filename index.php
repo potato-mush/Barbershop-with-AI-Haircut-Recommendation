@@ -481,9 +481,23 @@
             <div class="modal-body">
                 <div class="info-message">
                     <strong>📸 How it works:</strong>
-                    The camera will start automatically. Position your face in the frame, then click "Start Analysis" when ready. Our AI will detect your face shape and recommend the best haircuts for you.
+                    First select your gender, then position your face in the frame and click "Start Analysis" when ready. Our AI will detect your face shape and recommend the best haircuts for you.
                     <br><br>
                     <strong>⚠️ Important:</strong> Use your real face in good lighting - not illustrations, photos on screens, or cartoons for accurate results.
+                </div>
+
+                <div class="gender-selection" id="genderSelectionBlock">
+                    <h5><i class="fas fa-user"></i> Select Gender</h5>
+                    <div class="gender-options">
+                        <label class="gender-option" for="genderMale">
+                            <input type="radio" id="genderMale" name="analysis_gender" value="male">
+                            <span>Male</span>
+                        </label>
+                        <label class="gender-option" for="genderFemale">
+                            <input type="radio" id="genderFemale" name="analysis_gender" value="female">
+                            <span>Female</span>
+                        </label>
+                    </div>
                 </div>
                 
                 <div class="video-container">
@@ -491,7 +505,7 @@
                     <canvas id="overlay" width="480" height="360"></canvas>
                 </div>
                 
-                <button id="startAnalysis" class="analysis-btn">Start Analysis</button>
+                <button id="startAnalysis" class="analysis-btn" disabled>Select Gender First</button>
                 
                 <div id="analysisResults" class="results-section">
                     <h3>Your Results:</h3>

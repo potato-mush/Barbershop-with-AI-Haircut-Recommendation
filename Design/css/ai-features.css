@@ -642,11 +642,65 @@
     margin-bottom: 5px;
 }
 
+/* Gender Selection */
+.gender-selection {
+    background: #f8f5f2;
+    border: 1px solid #e7ddd3;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 18px;
+}
+
+.gender-selection h5 {
+    margin: 0 0 12px 0;
+    color: #6d5d4f;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gender-options {
+    display: flex;
+    gap: 12px;
+}
+
+.gender-option {
+    flex: 1;
+    border: 2px solid #d9ccbf;
+    border-radius: 999px;
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fff;
+    transition: all 0.2s ease;
+    color: #6d5d4f;
+    font-weight: 600;
+}
+
+.gender-option input[type="radio"] {
+    margin: 0;
+}
+
+.gender-option.selected {
+    border-color: #9e8a78;
+    background: #efe9e3;
+    color: #4b3f33;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .floating-buttons {
         bottom: 20px;
         right: 20px18px;
+    }
+
+    .gender-options {
+        flex-direction: column;
     }
     
     .modal-content {

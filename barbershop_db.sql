@@ -213,7 +213,13 @@ INSERT INTO `services` (`service_id`, `service_name`, `service_description`, `se
 (6, 'Rebond', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '1500.00', 20, 2),
 (7, 'V Cut', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '80.00', 15, 3),
 (8, 'Fade Away', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '150.00', 20, 3),
-(9, 'Burst Fade pa ba to ya?', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '500.00', 20, 3);
+(9, 'Burst Fade pa ba to ya?', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '500.00', 20, 3),
+(10, 'Long Layers with Curtain Bangs', 'Soft layered cut that frames the face and adds natural movement. Maintenance: Medium. Face Shape: Oval. Gender: Female.', '650.00', 60, 5),
+(11, 'Textured Lob', 'Shoulder-length lob with texture at the crown to slim and elongate features. Maintenance: Medium. Face Shape: Round. Gender: Female.', '700.00', 60, 5),
+(12, 'Feathered Shoulder Cut', 'Feathered layers around the jawline to soften strong angles and add flow. Maintenance: Medium. Face Shape: Square. Gender: Female.', '680.00', 55, 5),
+(13, 'Collarbone Blunt Cut', 'Balanced blunt collarbone cut with side volume to avoid extra length. Maintenance: Low to Medium. Face Shape: Long. Gender: Female.', '620.00', 50, 5),
+(14, 'Side-Swept Layered Bob', 'Chin-grazing layered bob with side sweep to balance forehead and chin. Maintenance: Medium. Face Shape: Heart. Gender: Female.', '690.00', 55, 5),
+(15, 'Soft Pixie with Side Fringe', 'Modern pixie with soft fringe that adds width at forehead and chin areas. Maintenance: Medium to High. Face Shape: Diamond. Gender: Female.', '640.00', 50, 5);
 
 -- --------------------------------------------------------
 
@@ -256,7 +262,8 @@ CREATE TABLE `service_categories` (
 INSERT INTO `service_categories` (`category_id`, `category_name`) VALUES
 (2, 'Salon'),
 (3, 'Hair Cut'),
-(4, 'Uncategorized');
+(4, 'Uncategorized'),
+(5, 'AI Haircut Recommendations');
 
 -- --------------------------------------------------------
 
@@ -412,7 +419,7 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `service_id` int(5) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `service_id` int(5) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `service_categories`

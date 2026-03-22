@@ -2,6 +2,24 @@ let stream;
 let faceDetected = false;
 let modelsLoaded = false;
 let currentFaceShape = null;
+let selectedGender = null;
+
+function getSelectedGender() {
+    const selected = document.querySelector('input[name="analysis_gender"]:checked');
+    return selected ? selected.value : null;
+}
+
+function refreshGenderOptionState() {
+    const options = document.querySelectorAll('.gender-option');
+    options.forEach(option => {
+        const radio = option.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
 
 async function loadModels() {
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
@@ -23,52 +41,68 @@ async function loadModels() {
 }
 
 function analyzeFaceShape(landmarks, canvas, displaySize) {
-    const jaw = landmarks.getJawOutline();
-    const leftEye = landmarks.getLeftEye();
-    const rightEye = landmarks.getRightEye();
-    const nose = landmarks.getNose();
+    try {
+        if (!landmarks) {
+            throw new Error('Face landmarks are unavailable.');
+        }
+
+        const jaw = landmarks.getJawOutline();
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        const nose = landmarks.getNose();
+
+        if (!jaw || jaw.length < 16 || !leftEye || leftEye.length < 4 || !rightEye || rightEye.length < 4 || !nose || nose.length < 1) {
+            throw new Error('Incomplete face landmarks detected. Please face the camera directly.');
+        }
     
-    const leftEyeOuter = leftEye[0];
-    const rightEyeOuter = rightEye[3];
-    const noseTop = nose[0];
+        const leftEyeOuter = leftEye[0];
+        const rightEyeOuter = rightEye[3];
+        const noseTop = nose[0];
     
-    const avgEyeY = (leftEyeOuter.y + rightEyeOuter.y) / 2;
-    const foreheadY = avgEyeY - 60;
+        const avgEyeY = (leftEyeOuter.y + rightEyeOuter.y) / 2;
     
-    const foreheadBaseLeft = jaw[1];
-    const foreheadBaseRight = jaw[15];
+        const cheekLeft = jaw[3];
+        const cheekRight = jaw[13];
+        const jawLeft = jaw[4];
+        const jawRight = jaw[12];
+        const chinLeft = jaw[7];
+        const chinRight = jaw[9];
+        const chinPoint = jaw[8];
+
+        const foreheadBaseLeft = jaw[1];
+        const foreheadBaseRight = jaw[15];
+
+        // Estimate forehead height from face size instead of a fixed pixel value.
+        const eyeToChin = Math.max(1, Math.abs(chinPoint.y - avgEyeY));
+        const foreheadOffset = Math.max(30, Math.min(95, eyeToChin * 0.42));
+        const foreheadY = avgEyeY - foreheadOffset;
+
+        const foreheadLeft = { x: foreheadBaseLeft.x, y: foreheadY };
+        const foreheadRight = { x: foreheadBaseRight.x, y: foreheadY };
     
-    const foreheadLeft = { x: foreheadBaseLeft.x, y: foreheadY };
-    const foreheadRight = { x: foreheadBaseRight.x, y: foreheadY };
+        const topReference = foreheadY;
     
-    const cheekLeft = jaw[3];
-    const cheekRight = jaw[13];
-    const jawLeft = jaw[4];
-    const jawRight = jaw[12];
-    const chinLeft = jaw[7];
-    const chinRight = jaw[9];
-    const chinPoint = jaw[8];
+        const foreheadWidth = Math.abs(foreheadRight.x - foreheadLeft.x);
+        const cheekWidth = Math.abs(cheekRight.x - cheekLeft.x);
+        const jawWidth = Math.abs(jawRight.x - jawLeft.x);
+        const chinWidth = Math.abs(chinRight.x - chinLeft.x);
+        const faceLength = Math.abs(chinPoint.y - topReference);
     
-    const topReference = foreheadY;
+        const maxWidth = Math.max(foreheadWidth, cheekWidth, jawWidth);
+        if (!isFinite(maxWidth) || maxWidth <= 0 || !isFinite(faceLength) || faceLength <= 0) {
+            throw new Error('Invalid face measurements. Improve lighting and keep your face centered.');
+        }
     
-    const foreheadWidth = Math.abs(foreheadRight.x - foreheadLeft.x);
-    const cheekWidth = Math.abs(cheekRight.x - cheekLeft.x);
-    const jawWidth = Math.abs(jawRight.x - jawLeft.x);
-    const chinWidth = Math.abs(chinRight.x - chinLeft.x);
-    const faceLength = Math.abs(chinPoint.y - topReference);
+        const normForehead = foreheadWidth / maxWidth;
+        const normCheek = cheekWidth / maxWidth;
+        const normJaw = jawWidth / maxWidth;
+        const normChin = chinWidth / maxWidth;
     
-    const maxWidth = Math.max(foreheadWidth, cheekWidth, jawWidth);
+        const lengthWidthRatio = faceLength / maxWidth;
     
-    const normForehead = foreheadWidth / maxWidth;
-    const normCheek = cheekWidth / maxWidth;
-    const normJaw = jawWidth / maxWidth;
-    const normChin = chinWidth / maxWidth;
-    
-    const lengthWidthRatio = faceLength / maxWidth;
-    
-    if (canvas && displaySize) {
-        const ctx = canvas.getContext('2d');
-        ctx.lineWidth = 3;
+        if (canvas && displaySize) {
+            const ctx = canvas.getContext('2d');
+            ctx.lineWidth = 3;
         
         ctx.strokeStyle = '#00FF00';
         ctx.beginPath();
@@ -112,26 +146,30 @@ function analyzeFaceShape(landmarks, canvas, displaySize) {
         ctx.setLineDash([]);
         ctx.fillStyle = '#00FFFF';
         ctx.fillText('Length', chinPoint.x + 10, (topReference + chinPoint.y) / 2);
-    }
+        }
     
-    const widthVariation = Math.max(normForehead, normCheek, normJaw) - Math.min(normForehead, normCheek, normJaw);
-    const foreheadToJaw = normForehead - normJaw;
-    const cheekToDiamond = Math.abs(normCheek - Math.max(normForehead, normJaw));
+        const widthVariation = Math.max(normForehead, normCheek, normJaw) - Math.min(normForehead, normCheek, normJaw);
+        const foreheadToJaw = normForehead - normJaw;
+        const cheekProminence = normCheek - ((normForehead + normJaw) / 2);
+        const jawDominance = normJaw - normForehead;
+        const chinNarrowness = 1 - normChin;
     
-    const isWidestForehead = normForehead >= normCheek && normForehead >= normJaw;
-    const isWidestCheeks = normCheek >= normForehead && normCheek >= normJaw;
-    const isWidestJaw = normJaw >= normForehead && normJaw >= normCheek;
-    const widestArea = isWidestForehead ? 'FOREHEAD' : isWidestCheeks ? 'CHEEKS' : 'JAW';
+        const isWidestForehead = normForehead >= normCheek && normForehead >= normJaw;
+        const isWidestCheeks = normCheek >= normForehead && normCheek >= normJaw;
+        const isWidestJaw = normJaw >= normForehead && normJaw >= normCheek;
+        const widestArea = isWidestForehead ? 'FOREHEAD' : isWidestCheeks ? 'CHEEKS' : 'JAW';
     
-    console.log('=== FACE SHAPE DETECTION ===');
+        console.log('=== FACE SHAPE DETECTION ===');
     console.log('📏 Width Measurements:');
     console.log('  Forehead:', foreheadWidth.toFixed(1), `[${(normForehead * 100).toFixed(0)}%]`);
     console.log('  Cheeks:  ', cheekWidth.toFixed(1), `[${(normCheek * 100).toFixed(0)}%]`);
     console.log('  Jawline: ', jawWidth.toFixed(1), `[${(normJaw * 100).toFixed(0)}%]`);
     console.log('  L/W Ratio:', lengthWidthRatio.toFixed(3));
     console.log('  Widest Area:', widestArea);
+    console.log('  Forehead-Jaw:', foreheadToJaw.toFixed(3));
+    console.log('  Cheek Prominence:', cheekProminence.toFixed(3));
     
-    const scores = {
+        const scores = {
         oval: 0,
         round: 0,
         square: 0,
@@ -139,67 +177,77 @@ function analyzeFaceShape(landmarks, canvas, displaySize) {
         heart: 0,
         diamond: 0
     };
-    
-    // OVAL SCORING
-    if (lengthWidthRatio >= 1.20 && lengthWidthRatio <= 1.45) scores.oval += 50;
-    if (foreheadToJaw >= 0.08 && foreheadToJaw <= 0.22) scores.oval += 40;
-    if (normCheek >= 0.88) scores.oval += 20;
-    if (normJaw >= 0.75 && normJaw < 0.85) scores.oval += 20;
-    if (lengthWidthRatio < 1.08) scores.oval -= 50;
-    
-    // ROUND SCORING
-    if (lengthWidthRatio < 1.08) scores.round += 50;
-    if (widthVariation < 0.12) scores.round += 35;
-    if (normJaw >= 0.85 && normForehead >= 0.85) scores.round += 20;
-    if (lengthWidthRatio > 1.15) scores.round -= 50;
-    
-    // SQUARE SCORING
-    if (normJaw >= 0.88) scores.square += 60;
-    if (lengthWidthRatio >= 0.98 && lengthWidthRatio <= 1.08) scores.square += 50;
-    if (widthVariation < 0.10) scores.square += 50;
-    if (Math.abs(normForehead - normJaw) < 0.08) scores.square += 40;
-    if (lengthWidthRatio > 1.50) scores.square -= 50;
-    
-    // LONG SCORING
-    if (lengthWidthRatio > 1.48) scores.long += 55;
-    if (widthVariation < 0.15) scores.long += 30;
-    if (lengthWidthRatio < 1.30) scores.long -= 50;
-    
-    // HEART SCORING
-    if (isWidestForehead && normJaw < 0.75) scores.heart += 45;
-    if (foreheadToJaw > 0.28) scores.heart += 50;
-    if (normChin < 0.62) scores.heart += 30;
-    if (normJaw >= 0.82) scores.heart -= 50;
-    
-    // DIAMOND SCORING
-    if (isWidestCheeks && normCheek >= 0.96) scores.diamond += 50;
-    if (normForehead < 0.88 && normJaw < 0.88) scores.diamond += 40;
-    if (!isWidestCheeks) scores.diamond -= 50;
-    
-    let detectedShape = 'oval';
-    let maxScore = 0;
+
+        const similarity = (value, target, spread) => Math.max(0, 1 - Math.abs(value - target) / spread);
+
+    // OVAL: longer than wide, balanced but cheeks slightly widest, softly tapered jaw.
+    scores.oval += similarity(lengthWidthRatio, 1.32, 0.30) * 42;
+    scores.oval += similarity(foreheadToJaw, 0.10, 0.20) * 30;
+    scores.oval += similarity(widthVariation, 0.14, 0.14) * 18;
+    scores.oval += similarity(normJaw, 0.78, 0.16) * 10;
+    if (isWidestCheeks) scores.oval += 8;
+
+    // ROUND: close to equal length/width with soft, similarly wide forehead/jaw.
+    scores.round += similarity(lengthWidthRatio, 1.02, 0.20) * 45;
+    scores.round += similarity(widthVariation, 0.05, 0.10) * 30;
+    scores.round += similarity(foreheadToJaw, 0.00, 0.12) * 20;
+    scores.round += similarity(chinNarrowness, 0.20, 0.20) * 5;
+
+    // SQUARE: equal length/width, strong jaw, low taper between forehead and jaw.
+    scores.square += similarity(lengthWidthRatio, 1.03, 0.16) * 36;
+    scores.square += similarity(widthVariation, 0.04, 0.10) * 22;
+    scores.square += similarity(jawDominance, 0.05, 0.14) * 30;
+    scores.square += similarity(chinNarrowness, 0.16, 0.16) * 12;
+    if (isWidestJaw) scores.square += 10;
+
+    // LONG: face clearly longer than wide with relatively consistent side widths.
+    scores.long += similarity(lengthWidthRatio, 1.56, 0.30) * 62;
+    scores.long += similarity(widthVariation, 0.08, 0.12) * 26;
+    scores.long += similarity(foreheadToJaw, 0.03, 0.18) * 12;
+
+    // HEART: forehead wider than jaw with narrower chin.
+    scores.heart += similarity(foreheadToJaw, 0.24, 0.24) * 44;
+    scores.heart += similarity(chinNarrowness, 0.38, 0.24) * 32;
+    scores.heart += similarity(lengthWidthRatio, 1.24, 0.26) * 14;
+    if (isWidestForehead) scores.heart += 12;
+
+    // DIAMOND: cheeks widest, with narrower forehead and jaw plus pointed chin.
+    scores.diamond += similarity(cheekProminence, 0.12, 0.14) * 46;
+    scores.diamond += similarity(chinNarrowness, 0.34, 0.24) * 26;
+    scores.diamond += similarity(widthVariation, 0.16, 0.16) * 18;
+    if (isWidestCheeks) scores.diamond += 12;
+
+        const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+        if (!ranked.length || !ranked[0] || !isFinite(ranked[0][1])) {
+            throw new Error('Unable to classify face shape from current frame.');
+        }
+        const detectedShape = ranked[0][0];
+        const maxScore = ranked[0][1];
+        const secondScore = ranked[1] ? ranked[1][1] : 0;
+        const confidenceGap = Math.max(0, maxScore - secondScore);
     
     console.log('🎯 Shape Scores:');
-    for (const [shape, score] of Object.entries(scores)) {
+    for (const [shape, score] of ranked) {
         console.log(`  ${shape.padEnd(8)}: ${score} points`);
-        if (score > maxScore) {
-            maxScore = score;
-            detectedShape = shape;
-        }
     }
     
     console.log('✅ DETECTED:', detectedShape.toUpperCase());
+    console.log('📌 Confidence Gap:', confidenceGap.toFixed(2));
     console.log('============================');
     
-    return {
-        shape: detectedShape,
-        measurements: {
-            forehead: (normForehead * 100).toFixed(0),
-            cheeks: (normCheek * 100).toFixed(0),
-            jaw: (normJaw * 100).toFixed(0),
-            ratio: lengthWidthRatio.toFixed(2)
-        }
-    };
+        return {
+            shape: detectedShape,
+            measurements: {
+                forehead: (normForehead * 100).toFixed(0),
+                cheeks: (normCheek * 100).toFixed(0),
+                jaw: (normJaw * 100).toFixed(0),
+                ratio: lengthWidthRatio.toFixed(2)
+            }
+        };
+    } catch (error) {
+        console.error('analyzeFaceShape failed:', error);
+        throw error;
+    }
 }
 
 async function openAnalysisModal() {
@@ -208,6 +256,7 @@ async function openAnalysisModal() {
     
     const video = document.getElementById('video');
     const startAnalysisBtn = document.getElementById('startAnalysis');
+    selectedGender = getSelectedGender();
     
     try {
         stream = await navigator.mediaDevices.getUserMedia({ 
@@ -215,8 +264,13 @@ async function openAnalysisModal() {
         });
         
         video.srcObject = stream;
-        startAnalysisBtn.disabled = false;
-        startAnalysisBtn.textContent = 'Start Analysis';
+        if (selectedGender) {
+            startAnalysisBtn.disabled = false;
+            startAnalysisBtn.textContent = 'Start Analysis';
+        } else {
+            startAnalysisBtn.disabled = true;
+            startAnalysisBtn.textContent = 'Select Gender First';
+        }
     } catch (err) {
         console.error('Error accessing camera:', err);
         alert('Unable to access camera. Please ensure you have granted camera permissions.');
@@ -233,9 +287,10 @@ function closePopup(popupId) {
     
     const startAnalysisBtn = document.getElementById('startAnalysis');
     if (startAnalysisBtn) {
-        startAnalysisBtn.textContent = 'Start Analysis';
+        selectedGender = getSelectedGender();
+        startAnalysisBtn.textContent = selectedGender ? 'Start Analysis' : 'Select Gender First';
         startAnalysisBtn.style.backgroundColor = '';
-        startAnalysisBtn.disabled = false;
+        startAnalysisBtn.disabled = !selectedGender;
     }
     
     const canvas = document.getElementById('overlay');
@@ -275,6 +330,7 @@ async function retakeAnalysis() {
     
     const video = document.getElementById('video');
     const startBtn = document.getElementById('startAnalysis');
+    selectedGender = getSelectedGender();
     
     try {
         stream = await navigator.mediaDevices.getUserMedia({ 
@@ -284,8 +340,8 @@ async function retakeAnalysis() {
         video.srcObject = stream;
         
         if (startBtn) {
-            startBtn.disabled = false;
-            startBtn.textContent = 'Start Analysis';
+            startBtn.disabled = !selectedGender;
+            startBtn.textContent = selectedGender ? 'Start Analysis' : 'Select Gender First';
             startBtn.style.backgroundColor = '';
         }
     } catch (err) {
@@ -299,9 +355,9 @@ async function displayRecommendations(faceShape, measurements) {
     const faceShapeDiv = document.getElementById('faceShapeResult');
     const recommendationsDiv = document.getElementById('recommendations');
     
-    const data = await fetchRecommendations(faceShape);
+    const data = await fetchRecommendations(faceShape, selectedGender || 'any');
     
-    if (!data) {
+    if (!data || !data.recommendations || data.recommendations.length === 0) {
         const fallbackData = haircutRecommendationsFallback[faceShape];
         if (!fallbackData) {
             alert('Unable to load recommendations. Please try again.');
@@ -378,11 +434,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     const startAnalysisBtn = document.getElementById('startAnalysis');
     const video = document.getElementById('video');
+    const genderInputs = document.querySelectorAll('input[name="analysis_gender"]');
+
+    if (genderInputs && genderInputs.length > 0) {
+        genderInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                selectedGender = getSelectedGender();
+                refreshGenderOptionState();
+
+                if (!startAnalysisBtn) {
+                    return;
+                }
+
+                const cameraActive = Boolean(stream);
+                startAnalysisBtn.disabled = !(selectedGender && cameraActive);
+                startAnalysisBtn.textContent = selectedGender ? 'Start Analysis' : 'Select Gender First';
+                startAnalysisBtn.style.backgroundColor = '';
+            });
+        });
+        refreshGenderOptionState();
+    }
     
     if (startAnalysisBtn && video) {
         startAnalysisBtn.addEventListener('click', async function() {
             if (!modelsLoaded) {
                 alert('AI models are still loading. Please wait a moment and try again.');
+                return;
+            }
+
+            selectedGender = getSelectedGender();
+            if (!selectedGender) {
+                alert('Please select your gender before starting analysis.');
                 return;
             }
             
@@ -436,7 +518,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const analysisResult = analyzeFaceShape(resizedDetections.landmarks, canvas, displaySize);
                     currentFaceShape = analysisResult.shape;
                     
-                    displayRecommendations(currentFaceShape, analysisResult.measurements);
+                    await displayRecommendations(currentFaceShape, analysisResult.measurements);
                     
                     startAnalysisBtn.textContent = 'Analysis Complete!';
                     startAnalysisBtn.style.backgroundColor = '#28a745';
@@ -455,7 +537,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
             } catch (err) {
                 console.error('Error during analysis:', err);
-                alert('An error occurred during analysis. Please try again.');
+                const message = err && err.message ? err.message : 'An unexpected error occurred.';
+                alert(`Analysis failed: ${message}\n\nTry better front lighting and keep your face centered.`);
                 startAnalysisBtn.textContent = 'Start Analysis';
                 startAnalysisBtn.disabled = false;
             }
