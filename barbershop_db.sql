@@ -197,29 +197,30 @@ CREATE TABLE `services` (
   `service_description` varchar(255) NOT NULL,
   `service_price` decimal(6,2) NOT NULL,
   `service_duration` int(5) NOT NULL,
-  `category_id` int(2) NOT NULL
+  `category_id` int(2) NOT NULL,
+  `service_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `services`
 --
 
-INSERT INTO `services` (`service_id`, `service_name`, `service_description`, `service_price`, `service_duration`, `category_id`) VALUES
-(1, 'Shaving', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '999.00', 20, 4),
-(2, 'Hair Styling', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '87.00', 15, 4),
-(3, 'Hair Color', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '600.00', 10, 4),
-(4, 'Boto', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '1499.00', 20, 2),
-(5, 'Keratin', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '999.00', 15, 2),
-(6, 'Rebond', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '1500.00', 20, 2),
-(7, 'V Cut', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '80.00', 15, 3),
-(8, 'Fade Away', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '150.00', 20, 3),
-(9, 'Burst Fade pa ba to ya?', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '500.00', 20, 3),
-(10, 'Long Layers with Curtain Bangs', 'Soft layered cut that frames the face and adds natural movement. Maintenance: Medium. Face Shape: Oval. Gender: Female.', '650.00', 60, 5),
-(11, 'Textured Lob', 'Shoulder-length lob with texture at the crown to slim and elongate features. Maintenance: Medium. Face Shape: Round. Gender: Female.', '700.00', 60, 5),
-(12, 'Feathered Shoulder Cut', 'Feathered layers around the jawline to soften strong angles and add flow. Maintenance: Medium. Face Shape: Square. Gender: Female.', '680.00', 55, 5),
-(13, 'Collarbone Blunt Cut', 'Balanced blunt collarbone cut with side volume to avoid extra length. Maintenance: Low to Medium. Face Shape: Long. Gender: Female.', '620.00', 50, 5),
-(14, 'Side-Swept Layered Bob', 'Chin-grazing layered bob with side sweep to balance forehead and chin. Maintenance: Medium. Face Shape: Heart. Gender: Female.', '690.00', 55, 5),
-(15, 'Soft Pixie with Side Fringe', 'Modern pixie with soft fringe that adds width at forehead and chin areas. Maintenance: Medium to High. Face Shape: Diamond. Gender: Female.', '640.00', 50, 5);
+INSERT INTO `services` (`service_id`, `service_name`, `service_description`, `service_price`, `service_duration`, `category_id`, `service_image`) VALUES
+(1, 'Shaving', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '999.00', 20, 4, NULL),
+(2, 'Hair Styling', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '87.00', 15, 4, NULL),
+(3, 'Hair Color', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '600.00', 10, 4, NULL),
+(4, 'Boto', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '1499.00', 20, 2, NULL),
+(5, 'Keratin', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '999.00', 15, 2, NULL),
+(6, 'Rebond', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '1500.00', 20, 2, NULL),
+(7, 'V Cut', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '80.00', 15, 3, NULL),
+(8, 'Fade Away', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '150.00', 20, 3, NULL),
+(9, 'Burst Fade pa ba to ya?', 'Barber is a person whose occupation is mainly to cut dress groom style and shave men', '500.00', 20, 3, NULL),
+(10, 'Long Layers with Curtain Bangs', 'Soft layered cut that frames the face and adds natural movement. Maintenance: Medium. Face Shape: Oval. Gender: Female.', '650.00', 60, 5, NULL),
+(11, 'Textured Lob', 'Shoulder-length lob with texture at the crown to slim and elongate features. Maintenance: Medium. Face Shape: Round. Gender: Female.', '700.00', 60, 5, NULL),
+(12, 'Feathered Shoulder Cut', 'Feathered layers around the jawline to soften strong angles and add flow. Maintenance: Medium. Face Shape: Square. Gender: Female.', '680.00', 55, 5, NULL),
+(13, 'Collarbone Blunt Cut', 'Balanced blunt collarbone cut with side volume to avoid extra length. Maintenance: Low to Medium. Face Shape: Long. Gender: Female.', '620.00', 50, 5, NULL),
+(14, 'Side-Swept Layered Bob', 'Chin-grazing layered bob with side sweep to balance forehead and chin. Maintenance: Medium. Face Shape: Heart. Gender: Female.', '690.00', 55, 5, NULL),
+(15, 'Soft Pixie with Side Fringe', 'Modern pixie with soft fringe that adds width at forehead and chin areas. Maintenance: Medium to High. Face Shape: Diamond. Gender: Female.', '640.00', 50, 5, NULL);
 
 -- --------------------------------------------------------
 

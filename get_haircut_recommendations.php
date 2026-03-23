@@ -34,7 +34,7 @@ $searchTerm = $shapeMap[$faceShape];
 
 try {
     $sql = "
-        SELECT s.service_id, s.service_name, s.service_description, s.service_price, s.service_duration
+        SELECT s.service_id, s.service_name, s.service_description, s.service_price, s.service_duration, s.service_image
         FROM services s
         INNER JOIN service_categories sc ON s.category_id = sc.category_id
         WHERE sc.category_name = 'AI Haircut Recommendations'
@@ -68,13 +68,22 @@ try {
         
         $cleanDescription = preg_replace('/\s*Maintenance:.*?\..*?Face Shape:.*$/', '', $service['service_description']);
         
+        $imagePath = null;
+        if (!empty($service['service_image'])) {
+            $imagePath = $service['service_image'];
+            if (strpos($imagePath, 'barber-admin/') !== 0) {
+                $imagePath = 'barber-admin/' . ltrim($imagePath, '/');
+            }
+        }
+
         $recommendations[] = [
             'id' => $service['service_id'],
             'style' => $service['service_name'],
             'description' => trim($cleanDescription),
             'maintenance' => $maintenance,
             'price' => '₱' . number_format($service['service_price'], 2),
-            'duration' => $service['service_duration'] . ' mins'
+            'duration' => $service['service_duration'] . ' mins',
+            'image' => $imagePath
         ];
     }
     

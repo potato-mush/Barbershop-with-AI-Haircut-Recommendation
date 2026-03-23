@@ -16,6 +16,72 @@
     //Check If user is already logged in
     if(isset($_SESSION['username_barbershop_Xw211qAAsq4']) && isset($_SESSION['password_barbershop_Xw211qAAsq4']))
     {
+        $serviceImagesDir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'services' . DIRECTORY_SEPARATOR;
+        $serviceImagesWebPrefix = 'uploads/services/';
+
+        function uploadServiceImage($fileField, $uploadDir, $webPrefix, &$errorMsg)
+        {
+            $errorMsg = '';
+
+            if (!isset($_FILES[$fileField]) || $_FILES[$fileField]['error'] === UPLOAD_ERR_NO_FILE) {
+                return null;
+            }
+
+            if ($_FILES[$fileField]['error'] !== UPLOAD_ERR_OK) {
+                $errorMsg = 'Image upload failed. Please try again.';
+                return false;
+            }
+
+            if (!is_uploaded_file($_FILES[$fileField]['tmp_name'])) {
+                $errorMsg = 'Invalid uploaded image.';
+                return false;
+            }
+
+            $imageInfo = @getimagesize($_FILES[$fileField]['tmp_name']);
+            if ($imageInfo === false) {
+                $errorMsg = 'Only image files are allowed.';
+                return false;
+            }
+
+            $allowedMimeTypes = array(
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif'
+            );
+
+            $mimeType = isset($imageInfo['mime']) ? $imageInfo['mime'] : '';
+            if (!isset($allowedMimeTypes[$mimeType])) {
+                $errorMsg = 'Allowed image formats: JPG, PNG, WEBP, GIF.';
+                return false;
+            }
+
+            if ($_FILES[$fileField]['size'] > (5 * 1024 * 1024)) {
+                $errorMsg = 'Image size must be 5MB or less.';
+                return false;
+            }
+
+            if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
+                $errorMsg = 'Unable to create upload directory.';
+                return false;
+            }
+
+            try {
+                $randomPart = bin2hex(random_bytes(5));
+            } catch (Exception $e) {
+                $randomPart = uniqid();
+            }
+
+            $fileName = 'service_' . time() . '_' . $randomPart . '.' . $allowedMimeTypes[$mimeType];
+            $destination = $uploadDir . $fileName;
+
+            if (!move_uploaded_file($_FILES[$fileField]['tmp_name'], $destination)) {
+                $errorMsg = 'Failed to save uploaded image.';
+                return false;
+            }
+
+            return $webPrefix . $fileName;
+        }
 ?>
         <!-- Begin Page Content -->
         <div class="container-fluid">
@@ -65,6 +131,7 @@
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
+                                        <th scope="col">Image</th>
                                         <th scope="col">Service Name</th>
                                         <th scope="col">Service Category</th>
                                         <th scope="col">Description</th>
@@ -78,6 +145,16 @@
                                         foreach($rows_services as $service)
                                         {
                                             echo "<tr>";
+                                                echo "<td style='width:120px;'>";
+                                                    if(!empty($service['service_image']))
+                                                    {
+                                                        echo "<img src='".$service['service_image']."' alt='Service Image' style='width:90px;height:70px;object-fit:cover;border-radius:6px;'>";
+                                                    }
+                                                    else
+                                                    {
+                                                        echo "<span class='text-muted'>No image</span>";
+                                                    }
+                                                echo "</td>";
                                                 echo "<td>";
                                                     echo $service['service_name'];
                                                 echo "</td>";
@@ -149,6 +226,7 @@
                 }
                 elseif($do == 'Add')
                 {
+                    $add_image_error = '';
                     ?>
                     
                     <div class="card shadow mb-4">
@@ -156,7 +234,7 @@
                             <h6 class="m-0 font-weight-bold text-primary">Add New Service</h6>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="services.php?do=Add">
+                            <form method="POST" action="services.php?do=Add" enctype="multipart/form-data">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -302,6 +380,25 @@
                                     </div>
                                 </div>
 
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label for="service_image">Service Image (optional)</label>
+                                            <input type="file" class="form-control" name="service_image" accept="image/*">
+                                            <?php
+                                                if(!empty($add_image_error))
+                                                {
+                                                    ?>
+                                                        <div class="invalid-feedback" style="display: block;">
+                                                            <?php echo htmlspecialchars($add_image_error); ?>
+                                                        </div>
+                                                    <?php
+                                                }
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- SUBMIT BUTTON -->
 
                                 <button type="submit" name="add_new_service" class="btn btn-primary">Add service</button>
@@ -319,10 +416,26 @@
                                     $service_price = test_input($_POST['service_price']);
                                     $service_description = test_input($_POST['service_description']);
 
+                                    $service_image = null;
+                                    $uploadedImage = uploadServiceImage('service_image', $serviceImagesDir, $serviceImagesWebPrefix, $add_image_error);
+                                    if ($uploadedImage === false)
+                                    {
+                                        $flag_add_service_form = 1;
+                                    }
+                                    elseif (!empty($uploadedImage))
+                                    {
+                                        $service_image = $uploadedImage;
+                                    }
+
+                                    if ($flag_add_service_form == 1)
+                                    {
+                                        goto add_service_form_end;
+                                    }
+
                                     try
                                     {
-                                        $stmt = $con->prepare("insert into services(service_name,service_description,service_price,service_duration,category_id) values(?,?,?,?,?) ");
-                                        $stmt->execute(array($service_name,$service_description,$service_price,$service_duration,$service_category));
+                                        $stmt = $con->prepare("insert into services(service_name,service_description,service_price,service_duration,category_id,service_image) values(?,?,?,?,?,?) ");
+                                        $stmt->execute(array($service_name,$service_description,$service_price,$service_duration,$service_category,$service_image));
                                         
                                         ?> 
                                             <!-- SUCCESS MESSAGE -->
@@ -345,6 +458,8 @@
                                     }
                                     
                                 }
+
+                                add_service_form_end:
                             ?>
                         </div>
                     </div>
@@ -365,13 +480,14 @@
 
                         if($count > 0)
                         {
+                            $edit_image_error = '';
                             ?>
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3">
                                     <h6 class="m-0 font-weight-bold text-primary">Edit Service</h6>
                                 </div>
                                 <div class="card-body">
-                                    <form method="POST" action="services.php?do=Edit&service_id=<?php echo $service_id; ?>">
+                                    <form method="POST" action="services.php?do=Edit&service_id=<?php echo $service_id; ?>" enctype="multipart/form-data">
                                         <!-- SERVICE ID -->
                                         <input type="hidden" name="service_id" value="<?php echo $service['service_id'];?>">
 
@@ -530,6 +646,36 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label for="service_image">Service Image</label>
+                                                    <?php if(!empty($service['service_image'])) { ?>
+                                                        <div style="margin-bottom:10px;">
+                                                            <img src="<?php echo htmlspecialchars($service['service_image']); ?>" alt="Current Service Image" style="width:120px;height:90px;object-fit:cover;border-radius:8px;">
+                                                        </div>
+                                                        <div class="form-check" style="margin-bottom:10px;">
+                                                            <input class="form-check-input" type="checkbox" value="1" id="remove_service_image" name="remove_service_image">
+                                                            <label class="form-check-label" for="remove_service_image">
+                                                                Remove current image
+                                                            </label>
+                                                        </div>
+                                                    <?php } ?>
+                                                    <input type="file" class="form-control" name="service_image" accept="image/*">
+                                                    <?php
+                                                        if(!empty($edit_image_error))
+                                                        {
+                                                            ?>
+                                                                <div class="invalid-feedback" style="display: block;">
+                                                                    <?php echo htmlspecialchars($edit_image_error); ?>
+                                                                </div>
+                                                            <?php
+                                                        }
+                                                    ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                         
                                         <!-- SUBMIT BUTTON -->
                                         <button type="submit" name="edit_service_sbmt" class="btn btn-primary">Save Edits</button>
@@ -546,10 +692,42 @@
                                             $service_price = test_input($_POST['service_price']);
                                             $service_description = test_input($_POST['service_description']);
 
+                                            $service_image = $service['service_image'];
+                                            $uploadedImage = uploadServiceImage('service_image', $serviceImagesDir, $serviceImagesWebPrefix, $edit_image_error);
+                                            if ($uploadedImage === false)
+                                            {
+                                                $flag_edit_service_form = 1;
+                                            }
+                                            elseif (!empty($uploadedImage))
+                                            {
+                                                if (!empty($service_image))
+                                                {
+                                                    $oldImagePath = __DIR__ . DIRECTORY_SEPARATOR . str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, str_replace('barber-admin/', '', $service_image));
+                                                    if (file_exists($oldImagePath) && is_file($oldImagePath)) {
+                                                        @unlink($oldImagePath);
+                                                    }
+                                                }
+
+                                                $service_image = $uploadedImage;
+                                            }
+                                            elseif (!empty($_POST['remove_service_image']) && !empty($service_image))
+                                            {
+                                                $oldImagePath = __DIR__ . DIRECTORY_SEPARATOR . str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, str_replace('barber-admin/', '', $service_image));
+                                                if (file_exists($oldImagePath) && is_file($oldImagePath)) {
+                                                    @unlink($oldImagePath);
+                                                }
+                                                $service_image = null;
+                                            }
+
+                                            if ($flag_edit_service_form == 1)
+                                            {
+                                                goto edit_service_form_end;
+                                            }
+
                                             try
                                             {
-                                                $stmt = $con->prepare("update services set service_name = ?, service_description = ?, service_price = ?, service_duration = ?, category_id = ? where service_id = ? ");
-                                                $stmt->execute(array($service_name,$service_description,$service_price,$service_duration,$service_category,$service_id));
+                                                $stmt = $con->prepare("update services set service_name = ?, service_description = ?, service_price = ?, service_duration = ?, category_id = ?, service_image = ? where service_id = ? ");
+                                                $stmt->execute(array($service_name,$service_description,$service_price,$service_duration,$service_category,$service_image,$service_id));
                                                 
                                                 ?> 
                                                     <!-- SUCCESS MESSAGE -->
@@ -572,6 +750,8 @@
                                             }
                                             
                                         }
+
+                                        edit_service_form_end:
                                     ?>
                                 </div>
                             </div>

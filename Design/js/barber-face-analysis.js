@@ -413,6 +413,11 @@ function displayRecommendationsWithData(data, measurements, resultsDiv, faceShap
     data.recommendations.forEach(rec => {
         recsHtml += `
             <div class="haircut-card">
+                ${rec.image ? `
+                    <div class="haircut-image-wrap">
+                        <img src="${rec.image}" alt="${rec.style}" class="haircut-image" loading="lazy">
+                    </div>
+                ` : ''}
                 <h6>${rec.style}</h6>
                 <p>${rec.description}</p>
                 <div class="haircut-details">
